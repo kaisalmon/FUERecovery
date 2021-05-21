@@ -1,8 +1,8 @@
 import cv2
 import glob
 import numpy as np
-from skimage.io import imread, imsave
-from skimage import exposure
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 from skimage.transform import match_histograms
 
 imageDir = "./images/*.*"
@@ -18,10 +18,28 @@ faceCascade = cv2.CascadeClassifier(cascPath)
 def process_image(imagePath):
     image = cv2.imread(imagePath)
     image = scale_image(image, 50)
-    image = detect_face(image)
+    image = whitepatch_balancing(image, 200, 100, 40, 40, 0.4)
     image = color_match(image, reference_image, 0.3)
+    image = detect_face(image)
     image = crop_image(image, 80)
     return image
+
+
+def whitepatch_balancing(image, from_row, from_column, row_width, column_width, strength):
+
+    image_patch = image[from_row:from_row+row_width,
+                        from_column:from_column+column_width]
+
+
+    whitepoint = image_patch.max(axis=0).mean(axis=0)
+
+    whitepoint_image = np.copy(image)
+    whitepoint_image[:] = whitepoint
+
+
+    white_balanced = cv2.divide(image.astype(np.float32), whitepoint_image.astype(np.float32))
+    return (white_balanced * strength) + (1 - strength) / 255 * image.astype(np.float32)
+
 
 def crop_image(image, pixels):
     y = pixels
@@ -31,7 +49,7 @@ def crop_image(image, pixels):
     return image[y:y + h, x:x + w]
 
 def color_match(image, reference, strength):
-    color_matched = match_histograms(image, reference, multichannel=True)
+    color_matched = match_histograms(image, reference/255, multichannel=True)
     beta = 1.0 - strength
     image = cv2.addWeighted(color_matched, strength, image, beta, 0.0)
     return image
@@ -45,8 +63,8 @@ def scale_image(image, scale_percent):
 
 
 def detect_face(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
+    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    gray = (gray * 255 ).astype(np.uint8)
     faces = faceCascade.detectMultiScale(
         gray,
         minNeighbors=1,
@@ -93,6 +111,6 @@ print(images)
 for path in images:
     image = process_image(path)
     cv2.imshow("Faces found", image)
-    cv2.waitKey(1)
+    cv2.waitKey(100)
 
-cv2.waitKey(100)
+cv2.waitKey(500)
