@@ -12,7 +12,7 @@ model = MTCNN()
 
 imageDir = "./images/*.*"
 cascPath = "./cascade.xml"
-ref_image_path = "./images/day4.jpg"
+ref_image_path = "./images/day3.jpg"
 target_face_size = 600
 fps = 6
 
@@ -22,7 +22,6 @@ faceCascade = cv2.CascadeClassifier(cascPath)
 def process_image(imagePath, number):
     image = cv2.imread(imagePath)
     image = first_step(image)
-    image = color_match(image, reference_image, 0)
     image = crop_image(image, 80)
     image = add_text(image, number)
     return image
@@ -31,7 +30,7 @@ def process_image(imagePath, number):
 def first_step(image):
     image = detect_face(image)
     image = scale_image(image, 50)
-    image = whitepatch_balancing(image, 200, 100, 40, 40, 0.7)
+    image = whitepatch_balancing(image.astype(np.float32), (150, 250), (200,200,200), 1)
     return image
 
 
@@ -42,11 +41,7 @@ def add_text(image, number):
     fontScale = 1
 
     org = (8, th-16)
-
-    # Red color in BGR
-    color = (1.,1.,1.)
-
-    # Line thickness of 2 px
+    color = (255,255,255)
     thickness = 2
 
     font = cv2.FONT_HERSHEY_SIMPLEX
@@ -60,20 +55,26 @@ def add_text(image, number):
 
     return image
 
-def whitepatch_balancing(image, from_row, from_column, row_width, column_width, strength):
+def whitepatch_balancing(image, input_coords, target_color, strength):
+    patch_size = 30
 
-    image_patch = image[from_row:from_row+row_width,
-                        from_column:from_column+column_width]
-
-
-    whitepoint = image_patch.max(axis=0).mean(axis=0)
-
-    whitepoint_image = np.copy(image)
-    whitepoint_image[:] = whitepoint
+    image_patch = image[input_coords[0]-patch_size:input_coords[0]+patch_size,
+                        input_coords[1]-patch_size:input_coords[1]+patch_size]
 
 
-    white_balanced = cv2.divide(image.astype(np.float32), whitepoint_image.astype(np.float32))
-    return (white_balanced * strength) + (1 - strength) / 255 * image.astype(np.float32)
+    input_color = image_patch.max(axis=0).mean(axis=0)
+
+    multiplier = target_color/input_color
+
+    print(multiplier)
+    multiplier_image = np.copy(image).astype(np.float32)
+    multiplier_image[:] = multiplier
+
+
+    multiplied = cv2.multiply(image, multiplier_image)
+    result = (multiplied * strength) + (1 - strength) * image
+    result = result.clip(0, 255)
+    return result.astype(np.uint8)
 
 
 def crop_image(image, pixels):
@@ -103,8 +104,7 @@ def detect_face(image):
 
     # Draw a rectangle around the faces
     if len(faces) == 0:
-        return image
-        #raise Exception("Couldn't detect face")
+        raise Exception("Couldn't detect face")
     face = faces[0]['box']
     (x, y, w, h) = face
     #print(x,y,w,h)
@@ -147,16 +147,17 @@ if True:
                 frame_length = 4
             image = scale_image(cv2.imread(path), 50)
             for i in range(0, frame_length):
-                writer.append_data(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+                writer.append_data(image)
             idx += 1
 
 with imageio.get_writer("output/output.gif", mode="I",  fps=fps) as writer:
     idx = 0
     for path in images:
+        print(path)
         frame_length = 1
         if idx == 0 or idx == len(images) - 1:
             frame_length = 4
-        image = process_image(path, idx+1) * 255
+        image = process_image(path, idx+1)
         cv2.imwrite(path.replace("images", "output"), image)
         for i in range(0, frame_length):
             writer.append_data(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
