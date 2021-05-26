@@ -8,6 +8,8 @@ import datetime
 from datetime import timedelta
 import hashlib
 from scipy import interpolate
+import matplotlib.pyplot as plt
+import math
 
 model = MTCNN()
 
@@ -67,7 +69,13 @@ def first_step(image):
     image = detect_face(image)
     image = scale_image(image, 50)
     # image = whitepatch_balancing(image.astype(np.float32), (375, 390), (170,170,220), 1)
-    image = whitepatch_balancing(image.astype(np.float32), (150, 390), (200, 200, 200), 1)
+    image = whitepatch_balancing(image.astype(np.float32), [
+         (150, 390),
+       # (375, 390)
+    ], [
+        (150, 170, 185),
+      #  (170, 170, 220)
+    ], 1)
     return image
 
 
@@ -93,34 +101,54 @@ def add_text(image, number):
     return image
 
 
-def whitepatch_balancing(image, input_coords, target_color, strength):
-    patch_size = 5
-    image = image.clip(0, 255)
+def whitepatch_balancing(image, input_coords, target_colors, strength):
+    patch_size = 30
+    image = image.clip(0, 255).astype(np.uint8)
 
-    image_patch = image[input_coords[0] - patch_size:input_coords[0] + patch_size,
-                  input_coords[1] - patch_size:input_coords[1] + patch_size]
+    for c in [0, 1, 2]:
+        mappings = [(0,0), (255, 255)]
+        for i in range(0, len(input_coords)):
+            input_coord = input_coords[i]
+            image_patch = image[input_coord[0] - patch_size:input_coord[0] + patch_size,
+                          input_coord[1] - patch_size:input_coord[1] + patch_size]
 
-    print("input min:", image_patch.min(axis=0).min(axis=0))
-    print("input mean:", image_patch.mean(axis=0).mean(axis=0))
-    print("input max:", image_patch.max(axis=0).max(axis=0))
+            cv2.rectangle(image,
+                          (input_coord[0]-patch_size,input_coord[1]-patch_size),
+                          (input_coord[0] + patch_size, input_coord[1] + patch_size),
+                          (0,0,0),
+                          1
+                      )
+
+            input_color = image_patch.mean(axis=0).mean(axis=0)
+            output_color = target_colors[i]
+
+            mappings += [(input_color[c], output_color[c])]
+
+        mappings.sort(key=lambda x:x[0])
+        x = [a_tuple[0] for a_tuple in mappings]
+        y = [a_tuple[1] for a_tuple in mappings]
+
+        print('x:', x)
+        print('y:', y)
+
+        tck = interpolate.splrep(x, y, s=1, k=2)
+        xnew = np.arange(0, 256, 1)
+        ynew = interpolate.splev(xnew, tck, der=0)
+
+        apply_mapping(image, c, ynew)
 
 
-    input_color = image_patch.mean(axis=0).mean(axis=0)
-
-    multiplier = target_color / input_color
-
-    print("input_color", input_color)
-    print("multiplier", multiplier)
-    multiplier_image = np.copy(image).astype(np.float32)
-    multiplier_image[::] = multiplier
-
-    multiplied = cv2.multiply(image.astype(np.float32), multiplier_image)
-    result = (multiplied * strength) + (1 - strength) * image
-    result = result.clip(0, 255)
+    return image.clip(0, 255).astype(np.uint8)
 
 
-    return result.astype(np.uint8)
-
+def apply_mapping(image, c, mapping):
+    for y in range(0,image.shape[0]):
+        for x in range(0,image.shape[1]):
+            v = image[y,x,c]
+            newV = math.floor(mapping[v])
+            newV = max(0, newV)
+            newV = min(255, newV)
+            image[y,x,c] = newV
 
 def crop_image(image, pixels):
     y = pixels
