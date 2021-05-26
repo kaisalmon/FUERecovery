@@ -70,11 +70,11 @@ def first_step(image):
     image = scale_image(image, 50)
     # image = whitepatch_balancing(image.astype(np.float32), (375, 390), (170,170,220), 1)
     image = whitepatch_balancing(image.astype(np.float32), [
-         (150, 390),
-       # (375, 390)
+         (140, 390),
+     #   (375, 390)
     ], [
-        (150, 170, 185),
-      #  (170, 170, 220)
+        (210, 210, 210),
+   #     (110, 125, 193)
     ], 1)
     return image
 
@@ -102,22 +102,23 @@ def add_text(image, number):
 
 
 def whitepatch_balancing(image, input_coords, target_colors, strength):
-    patch_size = 30
+    patch_size = 5
     image = image.clip(0, 255).astype(np.uint8)
 
     for c in [0, 1, 2]:
-        mappings = [(0,0), (255, 255)]
+        mappings = [(0, 0), (255, 255)]
         for i in range(0, len(input_coords)):
             input_coord = input_coords[i]
             image_patch = image[input_coord[0] - patch_size:input_coord[0] + patch_size,
                           input_coord[1] - patch_size:input_coord[1] + patch_size]
 
-            cv2.rectangle(image,
-                          (input_coord[0]-patch_size,input_coord[1]-patch_size),
-                          (input_coord[0] + patch_size, input_coord[1] + patch_size),
-                          (0,0,0),
-                          1
-                      )
+            if False:
+                cv2.rectangle(image,
+                              (input_coord[0]-patch_size-1,input_coord[1]-patch_size-1),
+                              (input_coord[0] + patch_size+1, input_coord[1] + patch_size+1),
+                              (0,0,0),
+                              1
+                          )
 
             input_color = image_patch.mean(axis=0).mean(axis=0)
             output_color = target_colors[i]
@@ -131,7 +132,7 @@ def whitepatch_balancing(image, input_coords, target_colors, strength):
         print('x:', x)
         print('y:', y)
 
-        tck = interpolate.splrep(x, y, s=1, k=2)
+        tck = interpolate.splrep(x, y, k=1)
         xnew = np.arange(0, 256, 1)
         ynew = interpolate.splev(xnew, tck, der=0)
 
@@ -147,7 +148,7 @@ def apply_mapping(image, c, mapping):
             v = image[y,x,c]
             newV = math.floor(mapping[v])
             newV = max(0, newV)
-            newV = min(255, newV)
+            newV = min(254, newV)
             image[y,x,c] = newV
 
 def crop_image(image, pixels):
