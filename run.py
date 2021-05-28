@@ -10,12 +10,11 @@ import hashlib
 from scipy import interpolate
 import matplotlib.pyplot as plt
 import math
-
 model = MTCNN()
 
 imageDir = "./images/day*.*"
 cascPath = "./cascade.xml"
-target_face_size = 600
+target_face_size = 270
 fps = 6
 skip_first_n = 0
 
@@ -68,9 +67,10 @@ def read_metafile(meta_path):
 def first_step(image):
     image = detect_face(image)
     image = scale_image(image, 50)
+    return image
     # image = whitepatch_balancing(image.astype(np.float32), (375, 390), (170,170,220), 1)
     image = whitepatch_balancing(image.astype(np.float32), [
-         (140, 390),
+         (160, 390),
      #   (375, 390)
     ], [
         (210, 210, 210),
@@ -102,7 +102,7 @@ def add_text(image, number):
 
 
 def whitepatch_balancing(image, input_coords, target_colors, strength):
-    patch_size = 5
+    patch_size = 1
     image = image.clip(0, 255).astype(np.uint8)
 
     for c in [0, 1, 2]:
@@ -112,7 +112,7 @@ def whitepatch_balancing(image, input_coords, target_colors, strength):
             image_patch = image[input_coord[0] - patch_size:input_coord[0] + patch_size,
                           input_coord[1] - patch_size:input_coord[1] + patch_size]
 
-            if False:
+            if True:
                 cv2.rectangle(image,
                               (input_coord[0]-patch_size-1,input_coord[1]-patch_size-1),
                               (input_coord[0] + patch_size+1, input_coord[1] + patch_size+1),
@@ -192,10 +192,12 @@ def detect_face(image):
             (fx, fy) = faces[0]['keypoints'][key]
             cv2.rectangle(image, (fx - 3, fy - 3), (fx + 3, fy + 3), (0, 255, 0), 2)
 
-    avg_face_dim = (h + w) / 2;
-    scale = target_face_size / avg_face_dim
-    dx = (-x - w / 2) * scale + image.shape[1] / 2
-    dy = (-y - h / 2) * scale + image.shape[0] / 2
+    eye_width = abs(faces[0]['keypoints']['left_eye'][0] - faces[0]['keypoints']['right_eye'][0])
+    scale = target_face_size / eye_width
+    x = (faces[0]['keypoints']['left_eye'][0] + faces[0]['keypoints']['right_eye'][0])/2
+    y = (faces[0]['keypoints']['left_eye'][1] + faces[0]['keypoints']['right_eye'][1])/2
+    dx = (-x) * scale + image.shape[1] / 2
+    dy = (-y) * scale + image.shape[0] / 2
 
     M = np.float32([
         [scale, 0, dx],
