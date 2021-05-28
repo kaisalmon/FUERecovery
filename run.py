@@ -11,6 +11,7 @@ from scipy import interpolate
 import matplotlib.pyplot as plt
 import math
 model = MTCNN()
+from iagcwd import image_agcwd;
 
 imageDir = "./images/day*.*"
 cascPath = "./cascade.xml"
@@ -63,10 +64,16 @@ def read_metafile(meta_path):
     except FileNotFoundError:
         return None
 
+def process_bright(img):
+   # img_negative = 255 - img
+    agcwd = image_agcwd(img, a=0.5, truncated_cdf=False)
+    #reversed = 255 - agcwd
+    return agcwd
 
 def first_step(image):
     image = detect_face(image)
     image = scale_image(image, 50)
+    image = process_bright(image)
     return image
     # image = whitepatch_balancing(image.astype(np.float32), (375, 390), (170,170,220), 1)
     image = whitepatch_balancing(image.astype(np.float32), [
