@@ -73,15 +73,15 @@ def process_bright(img):
 def first_step(image):
     image = detect_face(image)
     image = scale_image(image, 50)
-    image = process_bright(image)
-    return image
+    #image = process_bright(image)
+    #return image
     # image = whitepatch_balancing(image.astype(np.float32), (375, 390), (170,170,220), 1)
     image = whitepatch_balancing(image.astype(np.float32), [
-         (160, 390),
-     #   (375, 390)
+         (150, 420),
+ #       (375, 420)
     ], [
         (210, 210, 210),
-   #     (110, 125, 193)
+  #      (150, 165, 193)
     ], 1)
     return image
 
@@ -109,26 +109,29 @@ def add_text(image, number):
 
 
 def whitepatch_balancing(image, input_coords, target_colors, strength):
-    patch_size = 1
+    patch_size = 20
     image = image.clip(0, 255).astype(np.uint8)
 
     for c in [0, 1, 2]:
         mappings = [(0, 0), (255, 255)]
         for i in range(0, len(input_coords)):
             input_coord = input_coords[i]
-            image_patch = image[input_coord[0] - patch_size:input_coord[0] + patch_size,
-                          input_coord[1] - patch_size:input_coord[1] + patch_size]
+            image_patch = image[input_coord[1] - patch_size:input_coord[1] + patch_size,
+                          input_coord[0] - patch_size:input_coord[0] + patch_size]
 
-            if True:
-                cv2.rectangle(image,
-                              (input_coord[0]-patch_size-1,input_coord[1]-patch_size-1),
-                              (input_coord[0] + patch_size+1, input_coord[1] + patch_size+1),
-                              (0,0,0),
-                              1
-                          )
+
 
             input_color = image_patch.mean(axis=0).mean(axis=0)
             output_color = target_colors[i]
+
+            if False:
+                cv2.rectangle(image,
+                              (input_coord[0] - patch_size - 1, input_coord[1] - patch_size - 1),
+                              (input_coord[0] + patch_size + 1, input_coord[1] + patch_size + 1),
+                              (0, 0, 0),
+                              1
+                              )
+
 
             mappings += [(input_color[c], output_color[c])]
 
