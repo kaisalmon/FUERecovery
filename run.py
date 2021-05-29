@@ -77,12 +77,22 @@ def first_step(image):
     #return image
     # image = whitepatch_balancing(image.astype(np.float32), (375, 390), (170,170,220), 1)
     image = whitepatch_balancing(image.astype(np.float32), [
-         (150, 420),
- #       (375, 420)
+        (140, 420), #Wall coord
+        (640, 420), #Wall Coord
+        (380, 550) # Face coord
     ], [
-        (210, 210, 210),
-  #      (150, 165, 193)
-    ], 1)
+        (210, 210, 210), #Wall color
+        (210, 210, 210), # Wall color
+        (80, 90, 119) # Face Color
+    ], [
+        25, # Wall size
+        25, # Wall size
+        95 # Face size
+    ], [
+        .9, # Wall strength
+        .9, # wall strength
+        0.6 # face strength
+    ])
     return image
 
 
@@ -108,13 +118,14 @@ def add_text(image, number):
     return image
 
 
-def whitepatch_balancing(image, input_coords, target_colors, strength):
-    patch_size = 20
+def whitepatch_balancing(image, input_coords, target_colors, patch_sizes, strengths):
     image = image.clip(0, 255).astype(np.uint8)
 
     for c in [0, 1, 2]:
         mappings = [(0, 0), (255, 255)]
         for i in range(0, len(input_coords)):
+            patch_size = patch_sizes[i]
+            strength = strengths[i]
             input_coord = input_coords[i]
             image_patch = image[input_coord[1] - patch_size:input_coord[1] + patch_size,
                           input_coord[0] - patch_size:input_coord[0] + patch_size]
@@ -133,7 +144,8 @@ def whitepatch_balancing(image, input_coords, target_colors, strength):
                               )
 
 
-            mappings += [(input_color[c], output_color[c])]
+            target =  output_color[c] * strength + input_color[c] * (1 - strength)
+            mappings += [(input_color[c], target)]
 
         mappings.sort(key=lambda x:x[0])
         x = [a_tuple[0] for a_tuple in mappings]
