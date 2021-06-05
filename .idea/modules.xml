@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/FUERecoveryTimeLapse.iml" filepath="$PROJECT_DIR$/.idea/FUERecoveryTimeLapse.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../SubredditNotifier/.idea/SubredditNotifier.iml" filepath="$PROJECT_DIR$/../SubredditNotifier/.idea/SubredditNotifier.iml" />
     </modules>
   </component>
 </project>
