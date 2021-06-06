@@ -74,9 +74,9 @@ def first_step(image):
         (640, 420), #Wall Coord
         (380, 550) # Face coord
     ], [
-        (210, 210, 210), #Wall color
-        (210, 210, 210), # Wall color
-        (80, 90, 119) # Face Color
+        (205, 205, 210), #Wall color
+        (205, 205, 210), # Wall color
+        (90, 100, 140) # Face Color
     ], [
         25, # Wall size
         25, # Wall size
@@ -222,5 +222,3 @@ def detect_face(image):
     scaled_and_centered = cv2.warpAffine(image, M, (image.shape[1], image.shape[0]));
 
     return scaled_and_centered
-
-
