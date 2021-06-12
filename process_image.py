@@ -40,7 +40,7 @@ def process_image(imagePath, number):
 
     image = cv2.imread(imagePath)
     image = first_step(image)
-    image = crop_image(image, 80)
+    image = crop_image(image, 80, 80)
     image = add_text(image, number)
 
     with open(meta_path, "w") as metafile:
@@ -63,7 +63,9 @@ def process_bright(img):
     #reversed = 255 - agcwd
     return agcwd
 
+
 def first_step(image):
+    image = normalize_size_and_aspect_ratio(image)
     image = detect_face(image)
     image = scale_image(image, 50)
     #image = process_bright(image)
@@ -166,11 +168,12 @@ def apply_mapping(image, c, mapping):
             newV = min(254, newV)
             image[y,x,c] = newV
 
-def crop_image(image, pixels):
-    y = pixels
-    x = pixels
-    h = image.shape[0] - pixels * 2
-    w = image.shape[1] - pixels * 2
+
+def crop_image(image, xPixels, yPixels):
+    y = yPixels
+    x = xPixels
+    h = image.shape[0] - yPixels * 2
+    w = image.shape[1] - xPixels * 2
     return image[y:y + h, x:x + w]
 
 
@@ -180,6 +183,27 @@ def color_match(image, reference, strength):
     image = cv2.addWeighted(color_matched, strength, image, beta, 0.0)
     return image
 
+
+def normalize_size_and_aspect_ratio(image, target_height=2032, target_width=1530):
+    width = int(image.shape[1])
+    percent = target_width/width * 100
+    scaled = scale_image(image, percent)
+    height = int(scaled.shape[0])
+    to_crop = height - target_height
+    print('to_crop', to_crop, 'percent', percent)
+    if to_crop >= 0:
+        return crop_image(scaled, 0, to_crop/2)
+
+    height = int(image.shape[0])
+    percent = target_height / height * 100
+    scaled = scale_image(image, percent)
+    width = int(scaled.shape[1])
+    to_crop = width - target_width
+    print('to_crop', to_crop, 'percent', percent)
+    if to_crop >= 0:
+        return crop_image(scaled, to_crop/2, 0)
+
+    raise RuntimeError("What?")
 
 def scale_image(image, scale_percent):
     width = int(image.shape[1] * scale_percent / 100)
@@ -195,6 +219,8 @@ def detect_face(image):
 
     # Draw a rectangle around the faces
     if len(faces) == 0:
+        cv2.imshow('No face!', image)
+        cv2.waitKey(0)
         raise Exception("Couldn't detect face")
     face = faces[0]['box']
     (x, y, w, h) = face
